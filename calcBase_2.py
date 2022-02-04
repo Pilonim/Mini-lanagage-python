@@ -113,8 +113,8 @@ def p_statement_expr(p):
             p[0] = ('if', p[3], p[6], p[10])
         else:
             p[0] = ('if', p[3], p[6])
-    if p[1] == 'for': p[0] = ('for ', p[3], p[5], p[7], p[10])
-    if p[1] == 'while': p[0] = ('while ', p[3], p[6])
+    if p[1] == 'for': p[0] = ('for', p[3], p[5], p[7], p[10])
+    if p[1] == 'while': p[0] = ('while', p[3], p[6])
     if p[1] == 'printString': p[0] = ('print', p[4])
 
 def p_statement_functions(p):
@@ -244,12 +244,13 @@ def evalInst(t):
 
     if t[0] == 'while':
         print('coucou')
-        while evalExpr(t[1]):
+        while evalExpr(t[1]): #i=0;while(i<10){print(i);i=i+1;};
             evalInst(t[2])
 
     if t[0] == 'for':
+        print("coucou")
         evalInst(t[1])
-        while evalExpr(t[2]):
+        while evalExpr(t[2]): #for(i=0;i<5;i=i+1){print(2);};
             evalInst(t[4])
             evalInst(t[3])
 
