@@ -8,7 +8,8 @@ reserved = {
     'for': 'FOR',
     'while': 'WHILE',
     'else': 'ELSE',
-    'voidFunction': 'VOIDFUNCTION'
+    'voidFunction': 'VOIDFUNCTION',
+    'function': 'FUNCTION'
 }
 
 tokens = [
@@ -16,7 +17,7 @@ tokens = [
     'PLUS','TIMES','DIVIDE',
     'LPAREN','RPAREN',
     'LACOL','RACOL','DOUBLEC',
-    'AND', 'OR', 'SEMICOLON', 'NAME', 'EGAL', 'HIGHER', 'LOWER'
+    'AND', 'OR', 'SEMICOLON', 'NAME', 'EGAL', 'HIGHER', 'LOWER','COMA'
     ] + list(reserved.values())
 
 precedence = (
@@ -39,6 +40,7 @@ t_DOUBLEC   = r'"'
 t_AND       = r'&'
 t_OR        = r'\|'
 t_SEMICOLON = r';'
+t_COMA      = r','
 t_EGAL      = r'='
 t_LOWER     = r'<'
 t_HIGHER    = r'>'
@@ -89,6 +91,14 @@ def p_bloc(p):
     else:
         p[0] = ('bloc', p[1], 'empty')
 
+def p_param(p):
+    '''param : NAME COMA param
+        | NAME'''
+    if len(p) > 2:
+        p[0] = ('param',p[1],p[3])
+    else:
+        p[0] = ('param',p[1])
+
 def p_statement_expr(p):
     '''statement : PRINT LPAREN expression RPAREN
                 | PRINT LPAREN statement RPAREN
@@ -108,12 +118,21 @@ def p_statement_expr(p):
     if p[1] == 'printString': p[0] = ('print', p[4])
 
 def p_statement_functions(p):
-    'statement : VOIDFUNCTION NAME LPAREN RPAREN LACOL bloc RACOL SEMICOLON'
-    p[0] = ('voidFunction', (p[2], p[6], 'empty'), 'empty')
+    '''statement : VOIDFUNCTION NAME LPAREN RPAREN LACOL bloc RACOL
+        | FUNCTION NAME LPAREN param RPAREN LACOL bloc RACOL'''
+    if(p[1] == 'voidFunction'):
+        p[0] = ('voidFunction', (p[2], p[6], 'empty'), 'empty')
+    else:
+        p[0] = ('function', (p[2], p[7], p[4]), 'empty')
+
 
 def p_statement_call(p):
-    'statement : NAME LPAREN RPAREN SEMICOLON'
+    'statement : NAME LPAREN RPAREN'
     p[0] = ('call', p[1], 'empty')
+
+def p_statement_callParam(p):
+    'statement : NAME LPAREN param RPAREN'
+    p[0] = ('callParam', p[1], 'empty')
 
 def p_statement_variable(p):
     '''statement : NAME EGAL expression'''
@@ -190,7 +209,8 @@ def evalExpr(t):
     print('eval de', t)
     if type(t) is int: return t
     if type(t) is str:
-        return dico[t]
+        if t in dico:
+            return dico[t]
         if t in dicoFunc:
             pass
     if type(t) is tuple:
@@ -223,6 +243,7 @@ def evalInst(t):
         dico[t[1]] = evalExpr(t[2])
 
     if t[0] == 'while':
+        print('coucou')
         while evalExpr(t[1]):
             evalInst(t[2])
 
@@ -241,11 +262,11 @@ def evalInst(t):
                 evalInst(t[2])
             else:
                 evalInst(t[3]) #x=2;if(x<3){print(x);}else{print(6);};
-    if t[0] == 'voidFunction':
 
-        dicoFunc[t[1][0]] = t[1][1] #voidFunction toto(){print(2);};
-        print('t[1][1] = ', dicoFunc)
-
+    if t[0] == 'voidFunction' or t[0] == 'function':
+        dicoFunc[t[1][0]] = (t[1][2],t[1][1]) #voidFunction toto(){print(2);};toto();
+                                              #function toto(x,y,z){print(2);};
+        print(dicoFunc)
     if t[0] == 'call':
         evalInst(dicoFunc[t[1]])
 
