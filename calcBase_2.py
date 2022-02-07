@@ -97,7 +97,17 @@ def p_param(p):
     if len(p) > 2:
         p[0] = ('param',p[1],p[3])
     else:
-        p[0] = ('param',p[1])
+        p[0] = ('param',p[1],'empty')
+
+def p_args(p):
+    '''args : NAME COMA args
+            | NUMBER COMA args
+            | NAME
+            | NUMBER'''
+    if len(p) > 2:
+        p[0] = ('args',p[1],p[3])
+    else:
+        p[0] = ('args',p[1],'empty')
 
 def p_statement_expr(p):
     '''statement : PRINT LPAREN expression RPAREN
@@ -131,8 +141,8 @@ def p_statement_call(p):
     p[0] = ('call', p[1], 'empty')
 
 def p_statement_callParam(p):
-    'statement : NAME LPAREN param RPAREN'
-    p[0] = ('callParam', p[1], 'empty')
+    'statement : NAME LPAREN args RPAREN'
+    p[0] = ('callParam', p[1], p[3])
 
 def p_statement_variable(p):
     '''statement : NAME EGAL expression'''
@@ -206,13 +216,14 @@ def p_error(p):
     print("Syntax error at '%s'" % p.value)
 
 def evalExpr(t):
-    print('eval de', t)
     if type(t) is int: return t
     if type(t) is str:
+        if t in dicoParams:
+            if(dicoParams[t] != None):
+                return dicoParams[t]
         if t in dico:
             return dico[t]
-        if t in dicoFunc:
-            pass
+
     if type(t) is tuple:
 
         if t[0] == '+':     return evalExpr(t[1]) + evalExpr(t[2])
@@ -243,12 +254,10 @@ def evalInst(t):
         dico[t[1]] = evalExpr(t[2])
 
     if t[0] == 'while':
-        print('coucou')
         while evalExpr(t[1]): #i=0;while(i<10){print(i);i=i+1;};
             evalInst(t[2])
 
     if t[0] == 'for':
-        print("coucou")
         evalInst(t[1])
         while evalExpr(t[2]): #for(i=0;i<5;i=i+1){print(2);};
             evalInst(t[4])
@@ -264,18 +273,37 @@ def evalInst(t):
             else:
                 evalInst(t[3]) #x=2;if(x<3){print(x);}else{print(6);};
 
-    if t[0] == 'voidFunction' or t[0] == 'function':
-        dicoFunc[t[1][0]] = (t[1][2],t[1][1]) #voidFunction toto(){print(2);};toto();
-                                              #function toto(x,y,z){print(2);};
-        print(dicoFunc)
+    if t[0] == 'voidFunction':
+        dicoFunc[t[1][0]] = t[1][1] #voidFunction carre(){print(2);};for(i=0;i<10;i=i+1){carre();};
+
+    if t[0] == 'function':
+        dicoFunc[t[1][0]] = t[1][1] #function toto(x,y,z){print(x+y);};toto(1,8,3);function titi(i,s){print(i+s);};titi(33,66);
+        evalInst(t[1][2])
+
+    if t[0] == 'param':
+        dicoParams[t[1]] = None
+        evalInst(t[2])
+
+    if t[0] == 'args':
+        for cle in dicoParams.keys():
+            if(dicoParams[cle] == None):
+                dicoParams[cle] = evalExpr(t[1])
+                break
+        evalInst(t[2])
+
     if t[0] == 'call':
         evalInst(dicoFunc[t[1]])
+
+    if t[0] == 'callParam':
+        evalInst(t[2])
+        evalInst(dicoFunc[t[1]])
+        dicoParams.clear()
 
 
 yacc.yacc()
 dico = {}
 dicoFunc = {}
-
+dicoParams = {}
 s = input('calc > ')
 yacc.parse(s)
 
